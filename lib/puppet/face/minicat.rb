@@ -34,6 +34,9 @@ Puppet::Face.define(:minicat, '0.0.1') do
     option "--sorted" do
       summary "Display most catalog data sorted"
     end
+    option "--contentmatch <regex>" do
+      summary "Limit matching File resources to <regex>"
+    end
 
     when_invoked do |options|
       Puppet.parse_config
@@ -55,10 +58,13 @@ Puppet::Face.define(:minicat, '0.0.1') do
           content = res["parameters"].delete("content") if res["parameters"]
           if res["type"] == "File" && content
               filename = res["parameters"]["path"] || res["title"]
-              ap res["file"]
-              ap filename
+              filename.include?(options[:contentmatch] || '') || next
+
+              printf("%-12s %s\n", "manifest:", res["file"])
+              printf("%-12s %s\n", "file:", filename)
+              print "-- start ----------------------------------------------------\n"
               puts content
-              print "----------------------------------\n\n"
+              print "-- end ------------------------------------------------------\n\n"
           end
         end
 
@@ -101,12 +107,13 @@ Puppet::Face.define(:minicat, '0.0.1') do
        ap tags
 
        print "\n"
-    else
+      else
        ap c
        Puppet.notice "kthxbye"
-    end
+      end
 
-  end
+      return
+    end
   end
 
 end
