@@ -1,0 +1,56 @@
+#!/bin/bash
+
+SELF=$(basename $0)
+MODULE_PATH="$HOME/git/core-puppet/modules"
+MINICAT_LIBDIR="$HOME/git/puppet-minicat/lib"
+PUPPET_CONFIG=/etc/puppetlabs/puppet/master.conf
+CLASSLIST="core::verdad::client"
+EXTNODES="/usr/local/bin/vdnc"
+NODENAME=$HOSTNAME
+
+function usage()
+{
+	echo "Usage: ${SELF} [-e <ext-cmd>] [-n <node>] [-m <module-path>] [-f <config>] [-c] [-r <rgx>] <class>"
+	echo
+	echo "Flags:"
+	echo "  -e <ext-cmd>		external node classifier command"
+	echo "  -n <node>		node to compile"
+	echo "  -m <module-path>	module path for backing modules"
+	echo "  -f <config>		puppet config file"
+	echo "  -c			output content only"
+	echo "  -r <regex>		limit -c option to files matching <regex>"
+	echo
+	exit $1
+}
+
+while getopts "e:m:n:f:r:c" opt; do
+	case $opt in
+	e)	EXTNODES="$OPTARG" ;;
+	n)	NODENAME="$OPTARG" ;;
+	m)	MODULE_PATH="$OPTARG" ;;
+	f)	PUPPET_CONFIG="$OPTARG" ;;
+	r)	CONTENT_MATCH="$OPTARG" ;;
+	c)	CONTENT_ONLY=1 ;;
+	*)	usage -1 ;;
+	esac
+done; shift $((OPTIND - 1))
+
+(($#)) || usage -1
+
+[[ $# > 1 ]] && CLASSLIST=$(echo "$@" | tr ' ' ',') || CLASSLIST=$1
+
+#[[ -d "$MODULE_PATH" ]]    || { echo "Cannot find $MODULE_PATH"; exit -1; }
+#[[ -d "$MINICAT_LIBDIR" ]] || { echo "Cannot find $MINICAT_LIBDIR"; exit -1; }
+[[ -f "$PUPPET_CONFIG" ]]  || { echo "Cannot find $PUPPET_CONFIG"; exit -1; }
+
+export RUBYLIB="$MINICAT_LIBDIR"
+
+puppet minicat compile \
+	--config "$PUPPET_CONFIG" \
+	--classlist "$CLASSLIST" \
+	--modulepath "$MODULE_PATH" \
+	--external_nodes="$EXTNODES" \
+	--node "$NODENAME" \
+	--node_terminus=exec \
+	${CONTENT_MATCH:+--contentmatch=$CONTENT_MATCH} \
+	${CONTENT_ONLY:+--contentonly}
