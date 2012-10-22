@@ -58,7 +58,7 @@ Puppet::Face.define(:minicat, '0.0.1') do
           content = res["parameters"].delete("content") if res["parameters"]
           if res["type"] == "File" && content
               filename = res["parameters"]["path"] || res["title"]
-              filename.include?(options[:contentmatch] || '') || next
+              filename.index(/#{options[:contentmatch] || ''}/) || next
 
               printf("%-12s %s\n", "manifest:", res["file"])
               printf("%-12s %s\n", "file:", filename)
